@@ -1,0 +1,8 @@
+# List of source files containing translatable strings.
+# Please keep this file sorted alphabetically.
+data/org.dietro.banao.desktop.in
+data/org.dietro.banao.metainfo.xml.in
+data/org.dietro.banao.gschema.xml
+src/main.py
+src/window.py
+src/window.ui

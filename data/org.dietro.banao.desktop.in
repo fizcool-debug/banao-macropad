@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Banao
+Exec=banao
+Icon=org.dietro.banao
+Terminal=false
+Type=Application
+Categories=Utility;
+Keywords=GTK;
+StartupNotify=true
+DBusActivatable=true
