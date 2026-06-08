@@ -26,11 +26,31 @@ configure_file(
   install_mode: 'rwxr-xr-x'
 )
 
-banao_sources = [
+# Root source files
+install_data([
   '__init__.py',
   'main.py',
-  'window.py',
-  'input_injector.py',
-]
+], install_dir: moduledir)
 
-install_data(banao_sources, install_dir: moduledir)
+# Core package files
+install_data([
+  'core/__init__.py',
+  'core/profile_engine.py',
+  'core/serial_reader.py',
+  'core/engine.py',
+], install_dir: moduledir / 'core')
+
+# Platform package files
+install_data([
+  'platform/__init__.py',
+  'platform/base.py',
+  'platform/linux.py',
+  'platform/windows.py',
+  'platform/factory.py',
+], install_dir: moduledir / 'platform')
+
+# UI package files
+install_data([
+  'ui/__init__.py',
+  'ui/window.py',
+], install_dir: moduledir / 'ui')

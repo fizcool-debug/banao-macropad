@@ -26,7 +26,7 @@ gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 
 from gi.repository import Gtk, Gio, Adw
-from .window import BanaoWindow
+from .ui import BanaoWindow
 
 
 class BanaoApplication(Adw.Application):
@@ -36,9 +36,10 @@ class BanaoApplication(Adw.Application):
         super().__init__(application_id='org.dietro.banao',
                          flags=Gio.ApplicationFlags.DEFAULT_FLAGS,
                          resource_base_path='/org/dietro/banao')
-        self.create_action('quit', lambda *_: self.quit(), ['<control>q'])
+        self.create_action('quit', self.on_quit, ['<control>q'])
         self.create_action('about', self.on_about_action)
         self.create_action('preferences', self.on_preferences_action)
+        self.engine = None
 
     def do_activate(self):
         """Called when the application is activated.
@@ -46,10 +47,33 @@ class BanaoApplication(Adw.Application):
         We raise the application's main window, creating it if
         necessary.
         """
+        # Instantiate and start the BanaoEngine on activation
+        if not self.engine:
+            from .platform import factory
+            from .core.engine import BanaoEngine
+            
+            # Retrieve decoupled OS adapters
+            input_injector = factory.get_input_injector()
+            audio_controller = factory.get_audio_controller()
+            window_detector = factory.get_active_window_detector()
+            
+            # Inject dependencies into core engine
+            self.engine = BanaoEngine(input_injector, audio_controller, window_detector)
+            self.engine.start()
+
         win = self.props.active_window
         if not win:
             win = BanaoWindow(application=self)
         win.present()
+
+    def do_shutdown(self):
+        """Called when the application is shutting down. Clean up background threads."""
+        if hasattr(self, 'engine') and self.engine:
+            self.engine.stop()
+        Adw.Application.do_shutdown(self)
+
+    def on_quit(self, *args):
+        self.quit()
 
     def on_about_action(self, *args):
         """Callback for the app.about action."""
