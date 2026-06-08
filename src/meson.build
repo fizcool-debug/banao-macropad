@@ -40,14 +40,14 @@ install_data([
   'core/engine.py',
 ], install_dir: moduledir / 'core')
 
-# Platform package files
+# Adapters package files
 install_data([
-  'platform/__init__.py',
-  'platform/base.py',
-  'platform/linux.py',
-  'platform/windows.py',
-  'platform/factory.py',
-], install_dir: moduledir / 'platform')
+  'adapters/__init__.py',
+  'adapters/base.py',
+  'adapters/linux.py',
+  'adapters/windows.py',
+  'adapters/factory.py',
+], install_dir: moduledir / 'adapters')
 
 # UI package files
 install_data([

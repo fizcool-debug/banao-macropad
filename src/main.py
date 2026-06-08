@@ -49,7 +49,7 @@ class BanaoApplication(Adw.Application):
         """
         # Instantiate and start the BanaoEngine on activation
         if not self.engine:
-            from .platform import factory
+            from .adapters import factory
             from .core.engine import BanaoEngine
             
             # Retrieve decoupled OS adapters

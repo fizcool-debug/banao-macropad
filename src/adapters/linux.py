@@ -167,7 +167,7 @@ class LinuxAudioController(BaseAudioController):
         try:
             sink = self._pulse.sink_default_get()
             volume = max(0.0, min(1.0, volume))
-            self._pulse.volume_set_by_index(sink, volume)
+            self._pulse.volume_set_all_chans(sink, volume)
         except Exception as e:
             print(f"[LinuxAudio] Error setting master volume: {e}")
 
@@ -206,7 +206,7 @@ class LinuxAudioController(BaseAudioController):
         inputs = self._find_app_sink_inputs(app_name)
         for si in inputs:
             try:
-                self._pulse.volume_set_by_index(si, volume)
+                self._pulse.volume_set_all_chans(si, volume)
             except Exception as e:
                 print(f"[LinuxAudio] Error setting volume for sink-input {si.index}: {e}")
 
