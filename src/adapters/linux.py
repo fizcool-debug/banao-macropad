@@ -149,50 +149,98 @@ class LinuxInputInjector(BaseInputInjector):
             self.ui.close()
 
 
+def _matches_app_name(candidate, target):
+    if not candidate or not target:
+        return False
+    cand = candidate.lower()
+    tgt = target.lower()
+    
+    # Direct or substring match
+    if tgt in cand or cand in tgt:
+        return True
+        
+    import re
+    # Helper to strip common prefixes and suffixes
+    def clean(s):
+        s = s.replace("google-", "").replace("google", "").replace("org.gnome.", "")
+        if s.endswith(".desktop"):
+            s = s[:-8]
+        s = re.sub(r'[^a-z0-9]', '', s)
+        return s
+        
+    c_clean = clean(cand)
+    t_clean = clean(tgt)
+    if not c_clean or not t_clean:
+        return False
+    return t_clean in c_clean or c_clean in t_clean
+
+
+import threading
+
 class LinuxAudioController(BaseAudioController):
     """Linux implementation of audio control using PipeWire-Pulse/PulseAudio (pulsectl)."""
     
     def __init__(self):
         self._pulse = pulsectl.Pulse('banao-utility')
+        self._lock = threading.Lock()
 
     def get_master_volume(self):
-        try:
-            sink = self._pulse.sink_default_get()
-            return sink.volume.value_flat
-        except Exception as e:
-            print(f"[LinuxAudio] Error getting master volume: {e}")
-            return 0.0
+        with self._lock:
+            try:
+                sink = self._pulse.sink_default_get()
+                return sink.volume.value_flat
+            except Exception as e:
+                print(f"[LinuxAudio] Error getting master volume: {e}")
+                return 0.0
 
     def set_master_volume(self, volume):
-        try:
-            sink = self._pulse.sink_default_get()
-            volume = max(0.0, min(1.0, volume))
-            self._pulse.volume_set_all_chans(sink, volume)
-        except Exception as e:
-            print(f"[LinuxAudio] Error setting master volume: {e}")
+        with self._lock:
+            try:
+                sink = self._pulse.sink_default_get()
+                volume = max(0.0, min(1.0, volume))
+                self._pulse.volume_set_all_chans(sink, volume)
+            except Exception as e:
+                print(f"[LinuxAudio] Error setting master volume: {e}")
 
     def _find_app_sink_inputs(self, app_name):
         sink_inputs = []
-        if not app_name:
-            return sink_inputs
+        
+        # Special fallback for Global / unknown app_name:
+        # We target all active (uncorked) sink inputs. If none are active, we return all.
+        if not app_name or app_name == "Global":
+            active_inputs = []
+            all_inputs = []
+            with self._lock:
+                try:
+                    for si in self._pulse.sink_input_list():
+                        all_inputs.append(si)
+                        if not getattr(si, 'corked', False):
+                            active_inputs.append(si)
+                except Exception as e:
+                    print(f"[LinuxAudio] Error listing sink inputs for Global: {e}")
+            return active_inputs if active_inputs else all_inputs
 
-        app_name_lower = app_name.lower()
-        try:
-            for si in self._pulse.sink_input_list():
-                props = si.proplist
-                candidates = [
-                    props.get('application.name'),
-                    props.get('application.process.binary'),
-                    props.get('media.name'),
-                    props.get('window.x11.class')
-                ]
-                
-                for cand in candidates:
-                    if cand and app_name_lower in cand.lower():
-                        sink_inputs.append(si)
-                        break
-        except Exception as e:
-            print(f"[LinuxAudio] Error listing sink inputs: {e}")
+        with self._lock:
+            try:
+                for si in self._pulse.sink_input_list():
+                    props = si.proplist
+                    candidates = [
+                        props.get('application.name'),
+                        props.get('application.process.binary'),
+                        props.get('media.name'),
+                        props.get('window.x11.class'),
+                        props.get('window.class'),
+                        props.get('window.instance'),
+                        props.get('application.id'),
+                        props.get('pipewire.access.portal.app_id')
+                    ]
+                    
+                    for cand in candidates:
+                        if cand and _matches_app_name(cand, app_name):
+                            sink_inputs.append(si)
+                            break
+            except Exception as e:
+                print(f"[LinuxAudio] Error listing sink inputs: {e}")
         return sink_inputs
 
     def get_app_volume(self, app_name):
@@ -205,10 +253,11 @@ class LinuxAudioController(BaseAudioController):
         volume = max(0.0, min(1.0, volume))
         inputs = self._find_app_sink_inputs(app_name)
         for si in inputs:
-            try:
-                self._pulse.volume_set_all_chans(si, volume)
-            except Exception as e:
-                print(f"[LinuxAudio] Error setting volume for sink-input {si.index}: {e}")
+            with self._lock:
+                try:
+                    self._pulse.volume_set_all_chans(si, volume)
+                except Exception as e:
+                    print(f"[LinuxAudio] Error setting volume for sink-input {si.index}: {e}")
 
 
 class LinuxActiveWindowDetector(BaseActiveWindowDetector):

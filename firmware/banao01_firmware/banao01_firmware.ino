@@ -5,11 +5,8 @@
  * - Arduino Leonardo (ATmega32U4)
  * - Potentiometers: P1 -> Pin A0, P2 -> Pin A1
  * - Rotary Encoder: CLK (A) -> Pin 2, DT (B) -> Pin 3, SW (Button) -> Pin 4
- * - 8-Button Matrix: Rows -> Pins 5, 6, 7; Columns -> Pins 8, 9, 10
- *   Layout (3x3 Matrix with bottom-left empty):
- *     Row 0: B1 (Col 0), B2 (Col 1), B3 (Col 2)
- *     Row 1: B4 (Col 0), B5 (Col 1), B6 (Col 2)
- *     Row 2: Empty (Col 0), B7 (Col 1), B8 (Col 2)
+ * - 8 Buttons: Connected directly to Pins 5, 6, 7, 8, 9, 10, 14, 15
+ *   (Other side of each button connects to GND)
  */
 
 #define PIN_POT1 A0
@@ -19,30 +16,20 @@
 #define PIN_ENCODER_B 3
 #define PIN_ENCODER_BTN 4
 
-// Matrix definitions
-const int NUM_ROWS = 3;
-const int NUM_COLS = 3;
-const int ROW_PINS[NUM_ROWS] = {5, 6, 7};
-const int COL_PINS[NUM_COLS] = {8, 9, 10};
-
-// Map (row, col) to button index (1-8). 0 indicates the empty slot.
-const int BUTTON_MAP[NUM_ROWS][NUM_COLS] = {
-  {1, 2, 3}, // Row 0
-  {4, 5, 6}, // Row 1
-  {0, 7, 8}  // Row 2 (bottom-left coordinate [2][0] is empty)
-};
+// Direct Button configuration
+const int NUM_BUTTONS = 8;
+const int BUTTON_PINS[NUM_BUTTONS] = {5, 6, 7, 8, 9, 10, 14, 15};
 
 // State variables
 int lastPot1 = -1;
 int lastPot2 = -1;
-bool buttonStates[8] = {false};    // B1 - B8 (0-indexed state)
-bool lastButtonStates[8] = {false};
+bool buttonStates[NUM_BUTTONS] = {false};    // B1 - B8 (0-indexed state)
+bool lastButtonStates[NUM_BUTTONS] = {false};
 bool lastEncoderBtn = false;
-bool encoderBtnState = false;
 
 // Encoder ISR variables
 volatile bool encoderMoved = false;
-volatile const char* encoderDir = "NONE";
+const char* volatile encoderDir = "NONE";
 
 // Debounce settings
 unsigned long lastDebounceTime = 0;
@@ -82,36 +69,17 @@ void setup() {
   // Attach hardware interrupt to CLK (Pin 2)
   attachInterrupt(digitalPinToInterrupt(PIN_ENCODER_A), encoderISR, FALLING);
   
-  // Configure Matrix Row Pins (Outputs, idle HIGH)
-  for (int r = 0; r < NUM_ROWS; r++) {
-    pinMode(ROW_PINS[r], OUTPUT);
-    digitalWrite(ROW_PINS[r], HIGH);
-  }
-  
-  // Configure Matrix Column Pins (Inputs, internal pullup)
-  for (int c = 0; c < NUM_COLS; c++) {
-    pinMode(COL_PINS[c], INPUT_PULLUP);
+  // Configure Button Pins (Direct input with pullup)
+  for (int i = 0; i < NUM_BUTTONS; i++) {
+    pinMode(BUTTON_PINS[i], INPUT_PULLUP);
   }
 }
 
-// Scans the 3x3 matrix and debounces the 8 buttons
-void scanMatrix() {
-  for (int r = 0; r < NUM_ROWS; r++) {
-    // Activate current row by pulling it LOW
-    digitalWrite(ROW_PINS[r], LOW);
-    delayMicroseconds(10); // Settling time
-    
-    for (int c = 0; c < NUM_COLS; c++) {
-      int btnIndex = BUTTON_MAP[r][c];
-      if (btnIndex == 0) continue; // Skip empty position
-      
-      // Active LOW logic (switch pulls input column to GND)
-      bool rawState = (digitalRead(COL_PINS[c]) == LOW);
-      buttonStates[btnIndex - 1] = rawState;
-    }
-    
-    // Deactivate row by pulling it HIGH
-    digitalWrite(ROW_PINS[r], HIGH);
+// Reads the directly connected button states
+void readButtons() {
+  for (int i = 0; i < NUM_BUTTONS; i++) {
+    // Active LOW logic (switch connects input pin to GND when pressed)
+    buttonStates[i] = (digitalRead(BUTTON_PINS[i]) == LOW);
   }
 }
 
@@ -138,8 +106,8 @@ void loop() {
   int currentPot1 = readPotWithHysteresis(PIN_POT1, lastPot1);
   int currentPot2 = readPotWithHysteresis(PIN_POT2, lastPot2);
   
-  // Scan Button Grid
-  scanMatrix();
+  // Read Buttons directly
+  readButtons();
   
   // Read Encoder button (Active LOW)
   bool currentEncoderBtn = (digitalRead(PIN_ENCODER_BTN) == LOW);
@@ -154,8 +122,8 @@ void loop() {
     stateChanged = true;
   }
   
-  // Check matrix buttons
-  for (int i = 0; i < 8; i++) {
+  // Check buttons
+  for (int i = 0; i < NUM_BUTTONS; i++) {
     if (buttonStates[i] != lastButtonStates[i]) {
       stateChanged = true;
     }
@@ -180,7 +148,7 @@ void loop() {
     Serial.print(currentPot2);
     
     // Output B1 to B8
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < NUM_BUTTONS; i++) {
       Serial.print("|B");
       Serial.print(i + 1);
       Serial.print(":");

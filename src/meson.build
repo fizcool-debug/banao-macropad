@@ -53,4 +53,5 @@ install_data([
 install_data([
   'ui/__init__.py',
   'ui/window.py',
+  'ui/tray_helper.py',
 ], install_dir: moduledir / 'ui')

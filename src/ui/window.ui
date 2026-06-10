@@ -3,48 +3,491 @@
   <requires lib="gtk" version="4.0"/>
   <requires lib="Adw" version="1.0"/>
   <template class="BanaoWindow" parent="AdwApplicationWindow">
-    <property name="title" translatable="yes">Banao</property>
-    <property name="default-width">800</property>
-    <property name="default-height">600</property>
+    <property name="title" translatable="yes">Banao Macropad Configurator</property>
+    <property name="default-width">1000</property>
+    <property name="default-height">680</property>
+    
     <property name="content">
-      <object class="AdwToolbarView">
-        <child type="top">
-          <object class="AdwHeaderBar">
-            <child type="end">
-              <object class="GtkMenuButton">
-                <property name="primary">True</property>
-                <property name="icon-name">open-menu-symbolic</property>
-                <property name="tooltip-text" translatable="yes">Main Menu</property>
-                <property name="menu-model">primary_menu</property>
+      <object class="AdwNavigationSplitView" id="split_view">
+        <property name="min-sidebar-width">240</property>
+        <property name="max-sidebar-width">300</property>
+        <property name="sidebar-width-fraction">0.25</property>
+        
+        <!-- Sidebar Navigation Page (Profiles) -->
+        <property name="sidebar">
+          <object class="AdwNavigationPage">
+            <property name="title" translatable="yes">Profiles</property>
+            <property name="child">
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                
+                <!-- Sidebar Header -->
+                <child>
+                  <object class="AdwHeaderBar">
+                    <property name="show-start-title-buttons">False</property>
+                    <property name="show-end-title-buttons">False</property>
+                    <property name="title-widget">
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Profiles</property>
+                        <style>
+                          <class name="heading"/>
+                        </style>
+                      </object>
+                    </property>
+                    <child type="start">
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">6</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">Auto</property>
+                            <style>
+                              <class name="caption"/>
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkSwitch" id="auto_switch">
+                            <property name="active">True</property>
+                            <property name="valign">center</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child type="end">
+                      <object class="GtkButton" id="add_profile_btn">
+                        <property name="icon-name">list-add-symbolic</property>
+                        <property name="tooltip-text" translatable="yes">Add new profile</property>
+                        <style>
+                          <class name="flat"/>
+                        </style>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                
+                <!-- Profiles List -->
+                <child>
+                  <object class="GtkScrolledWindow">
+                    <property name="vexpand">True</property>
+                    <property name="child">
+                      <object class="GtkListBox" id="profile_list_box">
+                        <property name="selection-mode">single</property>
+                        <style>
+                          <class name="navigation-sidebar"/>
+                        </style>
+                      </object>
+                    </property>
+                  </object>
+                </child>
               </object>
-            </child>
+            </property>
           </object>
-        </child>
+        </property>
+        
+        <!-- Main Content Area -->
         <property name="content">
-          <object class="GtkLabel" id="label">
-            <property name="label" translatable="yes">Hello, World!</property>
-            <style>
-              <class name="title-1"/>
-            </style>
+          <object class="AdwNavigationPage">
+            <property name="title" translatable="yes">Editor</property>
+            <property name="child">
+              <object class="AdwToolbarView">
+                <child type="top">
+                  <object class="AdwHeaderBar">
+                    <!-- Title shows currently active/focused hardware profile -->
+                    <property name="title-widget">
+                      <object class="GtkLabel" id="active_profile_header_label">
+                        <property name="label" translatable="yes">Profile: Global</property>
+                        <style>
+                          <class name="title"/>
+                        </style>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+                
+                <property name="content">
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">12</property>
+                    <property name="margin-start">12</property>
+                    <property name="margin-end">12</property>
+                    <property name="margin-top">12</property>
+                    <property name="margin-bottom">12</property>
+                    
+                    <!-- Left: Hardware Panel Visualizer -->
+                    <child>
+                      <object class="GtkFrame">
+                        <property name="hexpand">True</property>
+                        <property name="vexpand">True</property>
+                        <style>
+                          <class name="hardware-card"/>
+                        </style>
+                        <property name="child">
+                          <object class="GtkBox">
+                            <property name="orientation">vertical</property>
+                            <property name="spacing">24</property>
+                            <property name="margin-start">24</property>
+                            <property name="margin-end">24</property>
+                            <property name="margin-top">24</property>
+                            <property name="margin-bottom">24</property>
+                            <property name="valign">center</property>
+                            <property name="halign">center</property>
+                            
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label" translatable="yes">BANAO01 PHYSICAL LAYOUT</property>
+                                <style>
+                                  <class name="caption"/>
+                                  <class name="dim-label"/>
+                                </style>
+                              </object>
+                            </child>
+                            
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">horizontal</property>
+                                <property name="spacing">48</property>
+                                
+                                <!-- Analog Dial Controls Column -->
+                                <child>
+                                  <object class="GtkBox">
+                                    <property name="orientation">vertical</property>
+                                    <property name="spacing">24</property>
+                                    <property name="valign">center</property>
+                                    
+                                    <!-- Potentiometer 1 (Master Volume) -->
+                                    <child>
+                                      <object class="GtkBox" id="pot1_container">
+                                        <property name="orientation">vertical</property>
+                                        <property name="spacing">4</property>
+                                        <style>
+                                          <class name="dial-container"/>
+                                        </style>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label" translatable="yes">POT 1: MASTER VOL</property>
+                                            <style>
+                                              <class name="dial-title"/>
+                                            </style>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLevelBar" id="pot1_level">
+                                            <property name="min-value">0.0</property>
+                                            <property name="max-value">100.0</property>
+                                            <property name="value">0.0</property>
+                                            <property name="width-request">140</property>
+                                            <property name="height-request">12</property>
+                                            <style>
+                                              <class name="pot-level-master"/>
+                                            </style>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLabel" id="pot1_val_label">
+                                            <property name="label" translatable="yes">0%</property>
+                                            <style>
+                                              <class name="caption"/>
+                                              <class name="neon-cyan"/>
+                                            </style>
+                                          </object>
+                                        </child>
+                                      </object>
+                                    </child>
+                                    
+                                    <!-- Potentiometer 2 (Focused App Volume) -->
+                                    <child>
+                                      <object class="GtkBox" id="pot2_container">
+                                        <property name="orientation">vertical</property>
+                                        <property name="spacing">4</property>
+                                        <style>
+                                          <class name="dial-container"/>
+                                        </style>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label" translatable="yes">POT 2: ACTIVE APP VOL</property>
+                                            <style>
+                                              <class name="dial-title"/>
+                                            </style>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLevelBar" id="pot2_level">
+                                            <property name="min-value">0.0</property>
+                                            <property name="max-value">100.0</property>
+                                            <property name="value">0.0</property>
+                                            <property name="width-request">140</property>
+                                            <property name="height-request">12</property>
+                                            <style>
+                                              <class name="pot-level-app"/>
+                                            </style>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLabel" id="pot2_val_label">
+                                            <property name="label" translatable="yes">0%</property>
+                                            <style>
+                                              <class name="caption"/>
+                                              <class name="neon-amber"/>
+                                            </style>
+                                          </object>
+                                        </child>
+                                      </object>
+                                    </child>
+                                    
+                                    <!-- Rotary Encoder dial -->
+                                    <child>
+                                      <object class="GtkBox" id="encoder_container">
+                                        <property name="orientation">vertical</property>
+                                        <property name="spacing">4</property>
+                                        <property name="halign">center</property>
+                                        <style>
+                                          <class name="dial-container"/>
+                                        </style>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label" translatable="yes">ROTARY ENCODER</property>
+                                            <style>
+                                              <class name="dial-title"/>
+                                            </style>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkButton" id="encoder_btn">
+                                            <property name="label" translatable="yes">PUSH (EB)</property>
+                                            <property name="width-request">80</property>
+                                            <property name="height-request">80</property>
+                                            <style>
+                                              <class name="keycap-button"/>
+                                              <class name="circular"/>
+                                            </style>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkBox">
+                                            <property name="orientation">horizontal</property>
+                                            <property name="spacing">8</property>
+                                            <property name="halign">center</property>
+                                            <child>
+                                              <object class="GtkButton" id="encoder_ccw_btn">
+                                                <property name="label" translatable="yes">↺ CCW</property>
+                                                <style>
+                                                  <class name="flat"/>
+                                                  <class name="caption"/>
+                                                </style>
+                                              </object>
+                                            </child>
+                                            <child>
+                                              <object class="GtkButton" id="encoder_cw_btn">
+                                                <property name="label" translatable="yes">CW ↻</property>
+                                                <style>
+                                                  <class name="flat"/>
+                                                  <class name="caption"/>
+                                                </style>
+                                              </object>
+                                            </child>
+                                          </object>
+                                        </child>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </child>
+                                
+                                <!-- 3x3 Button Switch Grid -->
+                                <child>
+                                  <object class="GtkGrid" id="button_grid">
+                                    <property name="row-spacing">16</property>
+                                    <property name="column-spacing">16</property>
+                                    <property name="valign">center</property>
+                                    <!-- Grid buttons B1-B8 populated programmatically -->
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                    
+                    <!-- Right: Responsive Edit Config Panel -->
+                    <child>
+                      <object class="GtkFrame" id="config_frame">
+                        <property name="width-request">320</property>
+                        <style>
+                          <class name="card"/>
+                        </style>
+                        <property name="child">
+                          <object class="GtkScrolledWindow">
+                            <property name="child">
+                              <object class="GtkBox" id="config_panel">
+                                <property name="orientation">vertical</property>
+                                <property name="spacing">16</property>
+                                <property name="margin-start">16</property>
+                                <property name="margin-end">16</property>
+                                <property name="margin-top">16</property>
+                                <property name="margin-bottom">16</property>
+                                
+                                <child>
+                                  <object class="GtkLabel" id="config_panel_title">
+                                    <property name="label" translatable="yes">Select a key to configure</property>
+                                    <property name="xalign">0</property>
+                                    <style>
+                                      <class name="title-2"/>
+                                    </style>
+                                  </object>
+                                </child>
+                                
+                                <!-- Edit Form Container (shown when key is selected) -->
+                                <child>
+                                  <object class="GtkBox" id="form_box">
+                                    <property name="orientation">vertical</property>
+                                    <property name="spacing">16</property>
+                                    <property name="sensitive">False</property>
+                                    
+                                    <!-- Custom Label -->
+                                    <child>
+                                      <object class="GtkBox">
+                                        <property name="orientation">vertical</property>
+                                        <property name="spacing">4</property>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label" translatable="yes">Custom Label</property>
+                                            <property name="xalign">0</property>
+                                            <style>
+                                              <class name="dim-label"/>
+                                            </style>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkEntry" id="label_entry">
+                                            <property name="placeholder-text" translatable="yes">e.g. Open Browser</property>
+                                          </object>
+                                        </child>
+                                      </object>
+                                    </child>
+                                    
+                                    <!-- Action Type Dropdown -->
+                                    <child>
+                                      <object class="GtkBox">
+                                        <property name="orientation">vertical</property>
+                                        <property name="spacing">4</property>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label" translatable="yes">Action Type</property>
+                                            <property name="xalign">0</property>
+                                            <style>
+                                              <class name="dim-label"/>
+                                            </style>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkDropDown" id="action_type_dropdown">
+                                            <!-- Items: "Keyboard Shortcut", "Text Macro", "None" -->
+                                          </object>
+                                        </child>
+                                      </object>
+                                    </child>
+                                    
+                                    <!-- Shortcut Input (List of Keys) -->
+                                    <child>
+                                      <object class="GtkBox" id="shortcut_config_box">
+                                        <property name="orientation">vertical</property>
+                                        <property name="spacing">4</property>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label" translatable="yes">Shortcut Key Combo (comma separated)</property>
+                                            <property name="xalign">0</property>
+                                            <style>
+                                              <class name="dim-label"/>
+                                            </style>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkEntry" id="shortcut_entry">
+                                            <property name="placeholder-text" translatable="yes">e.g. KEY_LEFTCTRL, KEY_LEFTSHIFT, KEY_T</property>
+                                          </object>
+                                        </child>
+                                      </object>
+                                    </child>
+                                    
+                                    <!-- Text Input -->
+                                    <child>
+                                      <object class="GtkBox" id="text_config_box">
+                                        <property name="orientation">vertical</property>
+                                        <property name="spacing">4</property>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label" translatable="yes">Text Macro</property>
+                                            <property name="xalign">0</property>
+                                            <style>
+                                              <class name="dim-label"/>
+                                            </style>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkEntry" id="text_entry">
+                                            <property name="placeholder-text" translatable="yes">e.g. git status\n</property>
+                                          </object>
+                                        </child>
+                                      </object>
+                                    </child>
+                                    
+                                    <!-- Save Button -->
+                                    <child>
+                                      <object class="GtkButton" id="save_binding_btn">
+                                        <property name="label" translatable="yes">Apply Binding</property>
+                                        <style>
+                                          <class name="suggested-action"/>
+                                        </style>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </child>
+                                
+                                <child>
+                                  <object class="GtkSeparator"/>
+                                </child>
+                                
+                                <!-- Active App details -->
+                                <child>
+                                  <object class="GtkBox">
+                                    <property name="orientation">vertical</property>
+                                    <property name="spacing">4</property>
+                                    <child>
+                                      <object class="GtkLabel">
+                                        <property name="label" translatable="yes">OS STATUS MONITOR</property>
+                                        <property name="xalign">0</property>
+                                        <style>
+                                          <class name="caption"/>
+                                          <class name="dim-label"/>
+                                        </style>
+                                      </object>
+                                    </child>
+                                    <child>
+                                      <object class="GtkLabel" id="focused_app_status_label">
+                                        <property name="label" translatable="yes">Focused Application: Global</property>
+                                        <property name="xalign">0</property>
+                                        <style>
+                                          <class name="caption"/>
+                                          <class name="neon-green"/>
+                                        </style>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </child>
+                              </object>
+                            </property>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                  </object>
+                </property>
+              </object>
+            </property>
           </object>
         </property>
       </object>
     </property>
   </template>
-  <menu id="primary_menu">
-    <section>
-      <item>
-        <attribute name="label" translatable="yes">_Preferences</attribute>
-        <attribute name="action">app.preferences</attribute>
-      </item>
-      <item>
-        <attribute name="label" translatable="yes">_Keyboard Shortcuts</attribute>
-        <attribute name="action">app.shortcuts</attribute>
-      </item>
-      <item>
-        <attribute name="label" translatable="yes">_About Banao</attribute>
-        <attribute name="action">app.about</attribute>
-      </item>
-    </section>
-  </menu>
 </interface>

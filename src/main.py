@@ -18,6 +18,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import sys
+import os
+import subprocess
+import threading
 import gi
 
 from gettext import gettext as _
@@ -25,7 +28,7 @@ from gettext import gettext as _
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 
-from gi.repository import Gtk, Gio, Adw
+from gi.repository import Gtk, Gio, Adw, GLib
 from .ui import BanaoWindow
 
 
@@ -40,6 +43,8 @@ class BanaoApplication(Adw.Application):
         self.create_action('about', self.on_about_action)
         self.create_action('preferences', self.on_preferences_action)
         self.engine = None
+        self.win = None
+        self.tray_process = None
 
     def do_activate(self):
         """Called when the application is activated.
@@ -61,15 +66,80 @@ class BanaoApplication(Adw.Application):
             self.engine = BanaoEngine(input_injector, audio_controller, window_detector)
             self.engine.start()
 
-        win = self.props.active_window
-        if not win:
-            win = BanaoWindow(application=self)
-        win.present()
+        # Start tray helper if not already running
+        if not self.tray_process:
+            self._start_tray_helper()
+
+        if not self.win:
+            self.win = BanaoWindow(application=self)
+        self.win.present()
+
+    def _start_tray_helper(self):
+        # Resolve tray_helper.py location
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        tray_helper_path = os.path.join(current_dir, 'ui', 'tray_helper.py')
+        
+        # Resolve icon path
+        icon_path = 'org.dietro.banao'
+        
+        # 1. Try directory relative to main.py for development
+        dev_icon_path = os.path.abspath(os.path.join(current_dir, '..', 'data', 'icons', 'hicolor', '256x256', 'apps', 'org.dietro.banao.png'))
+        if os.path.exists(dev_icon_path):
+            icon_path = dev_icon_path
+        else:
+            # 2. Try relative to package directory if installed
+            # Search under ~/.local/share/icons and /usr/share/icons
+            search_dirs = [
+                os.path.expanduser('~/.local/share/icons'),
+                '/usr/share/icons',
+                '/usr/local/share/icons',
+            ]
+            for sdir in search_dirs:
+                ipath = os.path.join(sdir, 'hicolor', '256x256', 'apps', 'org.dietro.banao.png')
+                if os.path.exists(ipath):
+                    icon_path = ipath
+                    break
+        
+        print(f"[Main] Spawning tray helper with icon {icon_path} from {tray_helper_path}", flush=True)
+        try:
+            self.tray_process = subprocess.Popen(
+                [sys.executable, tray_helper_path, icon_path],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                text=True,
+                bufsize=1
+            )
+            threading.Thread(target=self._read_tray_stdout, daemon=True).start()
+        except Exception as e:
+            print(f"[Main] Failed to start tray helper: {e}", flush=True)
+
+    def _read_tray_stdout(self):
+        try:
+            for line in self.tray_process.stdout:
+                line = line.strip()
+                if line == "SHOW":
+                    GLib.idle_add(self._present_window)
+                elif line == "QUIT":
+                    GLib.idle_add(self.quit)
+        except Exception as e:
+            print(f"[Main] Error reading from tray helper: {e}", flush=True)
+
+    def _present_window(self):
+        if self.win:
+            self.win.present()
 
     def do_shutdown(self):
         """Called when the application is shutting down. Clean up background threads."""
         if hasattr(self, 'engine') and self.engine:
             self.engine.stop()
+        if hasattr(self, 'tray_process') and self.tray_process:
+            try:
+                self.tray_process.stdin.write("QUIT\n")
+                self.tray_process.stdin.flush()
+                self.tray_process.terminate()
+                self.tray_process.wait(timeout=1)
+            except Exception:
+                pass
         Adw.Application.do_shutdown(self)
 
     def on_quit(self, *args):

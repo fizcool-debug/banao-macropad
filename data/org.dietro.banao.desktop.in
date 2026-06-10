@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Banao
-Exec=banao
+Exec=/home/dietro/.local/bin/banao
 Icon=org.dietro.banao
 Terminal=false
 Type=Application

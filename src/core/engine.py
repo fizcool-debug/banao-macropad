@@ -55,6 +55,7 @@ class BanaoEngine:
             "EB": 0
         }
         self.focused_app_class = "Global"
+        self.auto_profile_switching = True
         
         # Callback list for UI sync
         self.callbacks = {
@@ -105,16 +106,22 @@ class BanaoEngine:
         while self.running:
             try:
                 app_class = self.window_detector.get_active_window_class()
+                # Ignore focus events when our own Banao configurator window is active
+                if app_class and any(x in app_class.lower() for x in ("banao", "org.dietro.banao", "org.fizcool.banao01")):
+                    time.sleep(0.5)
+                    continue
+
                 if app_class != self.focused_app_class:
                     self.focused_app_class = app_class
                     self._trigger_callbacks("window_changed", app_class)
                     
-                    # Update profile context
-                    prof_key, prof_data = self.profile_engine.get_profile_for_app(app_class)
-                    if prof_key != self.active_profile_name:
-                        self.active_profile_name = prof_key
-                        self.active_profile = prof_data
-                        self._trigger_callbacks("profile_changed", prof_key, prof_data)
+                    # Update profile context (if auto-switching is enabled)
+                    if self.auto_profile_switching:
+                        prof_key, prof_data = self.profile_engine.get_profile_for_app(app_class)
+                        if prof_key != self.active_profile_name:
+                            self.active_profile_name = prof_key
+                            self.active_profile = prof_data
+                            self._trigger_callbacks("profile_changed", prof_key, prof_data)
             except Exception as e:
                 print(f"[Engine] Window polling error: {e}")
                 
@@ -126,8 +133,8 @@ class BanaoEngine:
         if "P1" in packet:
             val_p1 = packet["P1"]
             if val_p1 != self.last_state["P1"]:
-                # Convert 0-1023 to 0.0-1.0
-                vol = val_p1 / 1023.0
+                # Convert 0-1023 to 0.0-1.0 (reversed direction)
+                vol = (1023.0 - val_p1) / 1023.0
                 self.audio_controller.set_master_volume(vol)
                 self.last_state["P1"] = val_p1
                 
@@ -135,10 +142,22 @@ class BanaoEngine:
         if "P2" in packet:
             val_p2 = packet["P2"]
             if val_p2 != self.last_state["P2"]:
-                vol = val_p2 / 1023.0
+                # Convert 0-1023 to 0.0-1.0 (reversed direction)
+                vol = (1023.0 - val_p2) / 1023.0
                 # Directly target the focused application window class
+                # Fall back to currently active profile class if window focus is unknown (Wayland fallback)
+                target_app = None
                 if self.focused_app_class and self.focused_app_class != "Global":
-                    self.audio_controller.set_app_volume(self.focused_app_class, vol)
+                    target_app = self.focused_app_class
+                elif self.active_profile:
+                    target_app = self.active_profile.get("app_class")
+                
+                # If no specific application name is identified, fall back to "Global"
+                # which will control the active/playing audio stream(s)
+                if not target_app:
+                    target_app = "Global"
+                
+                self.audio_controller.set_app_volume(target_app, vol)
                 self.last_state["P2"] = val_p2
 
         # 3. Handle buttons B1 - B8 & EB (Encoder Button)

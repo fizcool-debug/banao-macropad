@@ -29,7 +29,19 @@ VERSION = '@VERSION@'
 pkgdatadir = '@pkgdatadir@'
 localedir = '@localedir@'
 
-sys.path.insert(1, pkgdatadir)
+# Fallback for local development runs
+srcdir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+if os.path.isdir(os.path.join(srcdir, 'core')):
+    # Running from builddir: Use local source files and register 'banao' package dynamically
+    import types
+    banao_pkg = types.ModuleType('banao')
+    banao_pkg.__path__ = [srcdir]
+    sys.modules['banao'] = banao_pkg
+    sys.path.insert(1, srcdir)
+    pkgdatadir = os.path.dirname(__file__)
+else:
+    sys.path.insert(1, pkgdatadir)
+
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 locale.bindtextdomain('banao', localedir)
 locale.textdomain('banao')
@@ -40,7 +52,9 @@ if __name__ == '__main__':
     import gi
 
     from gi.repository import Gio
-    resource = Gio.Resource.load(os.path.join(pkgdatadir, 'banao.gresource'))
+    # Load compiled resource bundle
+    resource_path = os.path.join(pkgdatadir, 'banao.gresource')
+    resource = Gio.Resource.load(resource_path)
     resource._register()
 
     from banao import main
