@@ -116,6 +116,28 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 *Note: You may need to restart your computer for group assignment changes to take effect.*
 
+### 5. Wayland Profile Switching (AT-SPI Accessibility)
+
+Banao detects the focused application on **GNOME Wayland** using the **AT-SPI accessibility API** — the same trusted API used by screen readers. No extra GNOME extensions are required.
+
+For the detection to work with **non-GTK3 apps** (like Flatpak browsers or Electron apps), enable the toolkit accessibility bridge:
+```bash
+gsettings set org.gnome.desktop.interface toolkit-accessibility true
+```
+
+> [!NOTE]
+> This is a standard GNOME setting and has negligible performance impact. It simply tells apps to register with the accessibility bus, which Banao reads to detect window focus. GTK3/GTK4 apps register automatically regardless of this setting.
+
+> [!TIP]
+> If you have the [Focused Window D-Bus](https://extensions.gnome.org/extension/5592/focused-window-d-bus/) GNOME Shell extension installed and enabled, Banao will prefer it for even more reliable detection. To install it:
+> ```bash
+> # Clone and install the extension
+> git clone https://github.com/flexagoon/focused-window-dbus.git /tmp/focused-window-dbus
+> gnome-extensions pack /tmp/focused-window-dbus --out-dir=/tmp
+> gnome-extensions install --force /tmp/focused-window-dbus@flexagoon.com.shell-extension.zip
+> # Then log out and back in to activate it
+> ```
+
 ---
 
 ## Compilation, Installation & Run
