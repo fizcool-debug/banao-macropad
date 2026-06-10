@@ -312,12 +312,13 @@
                     <!-- Right: Responsive Edit Config Panel -->
                     <child>
                       <object class="GtkFrame" id="config_frame">
-                        <property name="width-request">320</property>
+                        <property name="width-request">380</property>
                         <style>
                           <class name="card"/>
                         </style>
                         <property name="child">
                           <object class="GtkScrolledWindow">
+                            <property name="hscrollbar-policy">never</property>
                             <property name="child">
                               <object class="GtkBox" id="config_panel">
                                 <property name="orientation">vertical</property>
