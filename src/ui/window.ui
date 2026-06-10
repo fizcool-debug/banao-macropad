@@ -394,12 +394,29 @@
                                         <property name="orientation">vertical</property>
                                         <property name="spacing">4</property>
                                         <child>
-                                          <object class="GtkLabel">
-                                            <property name="label" translatable="yes">Shortcut Key Combo (comma separated)</property>
-                                            <property name="xalign">0</property>
-                                            <style>
-                                              <class name="dim-label"/>
-                                            </style>
+                                          <object class="GtkBox">
+                                            <property name="orientation">horizontal</property>
+                                            <property name="spacing">6</property>
+                                            <child>
+                                              <object class="GtkLabel">
+                                                <property name="label" translatable="yes">Shortcut Key Combo (comma separated)</property>
+                                                <property name="xalign">0</property>
+                                                <property name="hexpand">True</property>
+                                                <style>
+                                                  <class name="dim-label"/>
+                                                </style>
+                                              </object>
+                                            </child>
+                                            <child>
+                                              <object class="GtkButton" id="cheatsheet_btn">
+                                                <property name="icon-name">help-about-symbolic</property>
+                                                <property name="tooltip-text" translatable="yes">View Common Keycodes Cheatsheet</property>
+                                                <style>
+                                                  <class name="flat"/>
+                                                  <class name="circular"/>
+                                                </style>
+                                              </object>
+                                            </child>
                                           </object>
                                         </child>
                                         <child>

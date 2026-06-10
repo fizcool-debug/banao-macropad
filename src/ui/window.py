@@ -204,6 +204,7 @@ class BanaoWindow(Adw.ApplicationWindow):
     action_type_dropdown = Gtk.Template.Child()
     shortcut_config_box = Gtk.Template.Child()
     shortcut_entry = Gtk.Template.Child()
+    cheatsheet_btn = Gtk.Template.Child()
     text_config_box = Gtk.Template.Child()
     text_entry = Gtk.Template.Child()
     save_binding_btn = Gtk.Template.Child()
@@ -321,10 +322,40 @@ class BanaoWindow(Adw.ApplicationWindow):
         self.encoder_btn.connect("clicked", self._on_control_selected_clicked, "EB")
         self.encoder_ccw_btn.connect("clicked", self._on_control_selected_clicked, "E1_CCW")
         self.encoder_cw_btn.connect("clicked", self._on_control_selected_clicked, "E1_CW")
+        
+        # Connect cheatsheet button
+        self.cheatsheet_btn.connect("clicked", self._on_cheatsheet_clicked)
 
     def _on_close_request(self, window):
         self.hide()
         return True
+
+    def _on_cheatsheet_clicked(self, button):
+        dialog = Adw.MessageDialog(
+            transient_for=self,
+            heading="Keycode Cheatsheet",
+            body="Below are common codes you can use for keyboard shortcuts:\n\n"
+                 "• Media Actions:\n"
+                 "  KEY_PLAYPAUSE (Play/Pause)\n"
+                 "  KEY_NEXTSONG (Next Track)\n"
+                 "  KEY_PREVIOUSSONG (Previous Track)\n"
+                 "  KEY_MUTE (Mute Audio)\n"
+                 "  KEY_VOLUMEUP (Volume Up)\n"
+                 "  KEY_VOLUMEDOWN (Volume Down)\n\n"
+                 "• Modifier Keys:\n"
+                 "  KEY_LEFTCTRL, KEY_LEFTALT, KEY_LEFTSHIFT, KEY_LEFTMETA (Super/Win)\n\n"
+                 "• Common Keys:\n"
+                 "  KEY_ENTER, KEY_ESC, KEY_TAB, KEY_SPACE, KEY_BACKSPACE, KEY_DELETE\n\n"
+                 "• Navigation & Arrows:\n"
+                 "  KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_PAGEUP, KEY_PAGEDOWN\n\n"
+                 "• Standard Letters & Numbers:\n"
+                 "  KEY_A to KEY_Z, KEY_0 to KEY_9\n\n"
+                 "Note: Key combos should be separated by commas (e.g., KEY_LEFTCTRL, KEY_T)."
+        )
+        dialog.add_response("close", "Close")
+        dialog.set_default_response("close")
+        dialog.set_close_response("close")
+        dialog.present()
 
     def _on_auto_switch_toggled(self, switch, pspec):
         active = switch.get_active()
