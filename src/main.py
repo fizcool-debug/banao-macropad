@@ -45,6 +45,22 @@ class BanaoApplication(Adw.Application):
         self.engine = None
         self.win = None
         self.tray_process = None
+        self.start_hidden = False
+        self.add_main_option(
+            'hidden',
+            ord('h'),
+            GLib.OptionFlags.NONE,
+            GLib.OptionArg.NONE,
+            'Start hidden in system tray',
+            None
+        )
+
+    def do_handle_local_options(self, options):
+        if options.contains('hidden'):
+            self.start_hidden = True
+        else:
+            self.start_hidden = False
+        return -1
 
     def do_activate(self):
         """Called when the application is activated.
@@ -72,7 +88,53 @@ class BanaoApplication(Adw.Application):
 
         if not self.win:
             self.win = BanaoWindow(application=self)
-        self.win.present()
+
+        # Ensure autostart configuration is active
+        self._ensure_autostart()
+
+        if getattr(self, 'start_hidden', False):
+            # Reset flag for future activations
+            self.start_hidden = False
+        else:
+            self.win.present()
+
+    def _ensure_autostart(self):
+        autostart_dir = os.path.expanduser('~/.config/autostart')
+        autostart_file = os.path.join(autostart_dir, 'org.dietro.banao.desktop')
+        
+        exe_path = '/home/dietro/.local/bin/banao'
+        if not os.path.exists(exe_path):
+            exe_path = sys.argv[0]
+            if not os.path.isabs(exe_path):
+                exe_path = os.path.abspath(exe_path)
+                
+        if os.path.exists(autostart_file):
+            try:
+                with open(autostart_file, 'r') as f:
+                    existing = f.read()
+                if f"Exec={exe_path} --hidden" in existing:
+                    return
+            except Exception:
+                pass
+                
+        os.makedirs(autostart_dir, exist_ok=True)
+        content = f"""[Desktop Entry]
+Name=Banao
+Comment=DIY Macropad Configuration Tool
+Exec={exe_path} --hidden
+Icon=org.dietro.banao
+Terminal=false
+Type=Application
+Categories=Utility;Settings;
+StartupNotify=true
+X-GNOME-Autostart-enabled=true
+"""
+        try:
+            with open(autostart_file, 'w') as f:
+                f.write(content)
+            print(f"[Main] Wrote autostart entry: {autostart_file}", flush=True)
+        except Exception as e:
+            print(f"[Main] Failed to write autostart entry: {e}", flush=True)
 
     def _start_tray_helper(self):
         # Resolve tray_helper.py location
