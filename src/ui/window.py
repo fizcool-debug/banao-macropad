@@ -734,17 +734,15 @@ class AppSelectionDialog(Gtk.Window):
                 img = Gtk.Image.new_from_icon_name("application-x-executable")
                 img.set_pixel_size(32)
                 row.add_prefix(img)
-                
-            row.app_data = {
-                "name": name,
-                "class": window_class
-            }
             self.list_box.append(row)
 
     def _on_search_changed(self, entry):
         self._populate_list(entry.get_text())
 
     def _on_row_activated(self, list_box, row):
-        if row and hasattr(row, "app_data"):
-            self.on_app_selected(row.app_data["name"], row.app_data["class"])
+        if row:
+            name = row.get_title()
+            subtitle = row.get_subtitle() or ""
+            app_class = subtitle.replace("Class: ", "").strip()
+            self.on_app_selected(name, app_class)
             self.destroy()
