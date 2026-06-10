@@ -404,66 +404,16 @@ class BanaoWindow(Adw.ApplicationWindow):
         self._load_active_profile_config()
 
     def _on_add_profile_btn_clicked(self, btn):
-        """Displays transient input dialog to create a new app profile."""
-        dialog = Gtk.Window(
-            title="Create Profile",
-            transient_for=self,
-            modal=True,
-            default_width=320,
-            default_height=200
-        )
-        dialog.set_resizable(False)
-        
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        box.set_margin_start(16)
-        box.set_margin_end(16)
-        box.set_margin_top(16)
-        box.set_margin_bottom(16)
-        
-        # Name Entry
-        lbl_name = Gtk.Label(label="Profile Name")
-        lbl_name.set_xalign(0)
-        entry_name = Gtk.Entry(placeholder_text="e.g. Photoshop")
-        
-        # App Class Entry
-        lbl_class = Gtk.Label(label="Target Window Class")
-        lbl_class.set_xalign(0)
-        entry_class = Gtk.Entry(placeholder_text="e.g. gimp")
-        
-        # Action Buttons
-        btn_box = Gtk.Box(orientation=Gtk.Orientation.horizontal, spacing=8)
-        btn_box.set_halign(Gtk.Align.END)
-        
-        btn_cancel = Gtk.Button(label="Cancel")
-        btn_add = Gtk.Button(label="Add")
-        btn_add.add_css_class("suggested-action")
-        
-        btn_box.append(btn_cancel)
-        btn_box.append(btn_add)
-        
-        box.append(lbl_name)
-        box.append(entry_name)
-        box.append(lbl_class)
-        box.append(entry_class)
-        box.append(btn_box)
-        dialog.set_child(box)
-        
-        # Event bindings
-        btn_cancel.connect("clicked", lambda *_: dialog.destroy())
-        
-        def save_new_profile(*_):
-            name = entry_name.get_text().strip()
-            app_class = entry_class.get_text().strip().lower()
+        """Displays selection dialog of installed apps to create a new profile."""
+        def on_app_selected(name, app_class):
             if name:
                 try:
                     self.engine.profile_engine.add_profile(name, app_class)
                     self._populate_profile_sidebar()
-                    dialog.destroy()
                 except Exception as e:
-                    # Quick warning alert
                     print(f"Error adding profile: {e}")
                     
-        btn_add.connect("clicked", save_new_profile)
+        dialog = AppSelectionDialog(self, on_app_selected)
         dialog.present()
 
     def _on_delete_profile_clicked(self, btn, name):
@@ -700,3 +650,100 @@ class BanaoWindow(Adw.ApplicationWindow):
     def _update_ui_focused_window(self, window_class):
         """Updates bottom window status bar."""
         self.focused_app_status_label.set_label(f"Focused Application: {window_class}")
+
+
+class AppSelectionDialog(Gtk.Window):
+    def __init__(self, parent_window, on_app_selected):
+        super().__init__(
+            title="Add Application Profile",
+            transient_for=parent_window,
+            modal=True,
+            default_width=450,
+            default_height=550
+        )
+        self.on_app_selected = on_app_selected
+        
+        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        main_box.set_margin_start(16)
+        main_box.set_margin_end(16)
+        main_box.set_margin_top(16)
+        main_box.set_margin_bottom(16)
+        
+        # Search Entry
+        self.search_entry = Gtk.SearchEntry(placeholder_text="Search installed applications...")
+        self.search_entry.connect("search-changed", self._on_search_changed)
+        main_box.append(self.search_entry)
+        
+        # Scrolled window
+        scrolled = Gtk.ScrolledWindow()
+        scrolled.set_vexpand(True)
+        scrolled.set_hexpand(True)
+        scrolled.set_propagate_natural_width(True)
+        scrolled.set_min_content_height(400)
+        
+        # List box
+        self.list_box = Gtk.ListBox()
+        self.list_box.add_css_class("boxed-list")
+        self.list_box.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        self.list_box.connect("row-activated", self._on_row_activated)
+        scrolled.set_child(self.list_box)
+        main_box.append(scrolled)
+        
+        self.set_child(main_box)
+        
+        # Fetch and filter apps
+        self.all_apps = []
+        for app in Gio.AppInfo.get_all():
+            if app.should_show():
+                self.all_apps.append(app)
+                
+        # Sort alphabetically
+        self.all_apps.sort(key=lambda a: a.get_name().lower())
+        
+        self._populate_list("")
+
+    def _populate_list(self, filter_text):
+        # Clear existing
+        while True:
+            row = self.list_box.get_row_at_index(0)
+            if not row:
+                break
+            self.list_box.remove(row)
+            
+        filter_text = filter_text.lower()
+        for app in self.all_apps:
+            name = app.get_name()
+            app_id = app.get_id() or ""
+            
+            if filter_text and filter_text not in name.lower() and filter_text not in app_id.lower():
+                continue
+                
+            row = Adw.ActionRow.new()
+            row.set_title(name)
+            
+            window_class = app_id.replace(".desktop", "").lower()
+            row.set_subtitle(f"Class: {window_class}")
+            
+            gicon = app.get_icon()
+            if gicon:
+                img = Gtk.Image.new_from_gicon(gicon)
+                img.set_pixel_size(32)
+                row.add_prefix(img)
+            else:
+                img = Gtk.Image.new_from_icon_name("application-x-executable")
+                img.set_pixel_size(32)
+                row.add_prefix(img)
+                
+            row.app_data = {
+                "name": name,
+                "class": window_class
+            }
+            self.list_box.append(row)
+
+    def _on_search_changed(self, entry):
+        self._populate_list(entry.get_text())
+
+    def _on_row_activated(self, list_box, row):
+        if row and hasattr(row, "app_data"):
+            self.on_app_selected(row.app_data["name"], row.app_data["class"])
+            self.destroy()
