@@ -685,6 +685,7 @@ class AppSelectionDialog(Gtk.Window):
         self.list_box = Gtk.ListBox()
         self.list_box.add_css_class("boxed-list")
         self.list_box.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        self.list_box.set_activate_on_single_click(True)
         self.list_box.connect("row-activated", self._on_row_activated)
         scrolled.set_child(self.list_box)
         main_box.append(scrolled)
