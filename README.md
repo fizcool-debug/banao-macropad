@@ -10,13 +10,13 @@ Built using **GTK 4** and **Libadwaita**, Banao is designed for modern Linux des
 
 ```mermaid
 graph TD
-    subgraph Hardware (Arduino Leonardo)
+    subgraph Hardware ["Hardware (Arduino Leonardo)"]
         Keypresses[Direct Pins 5-15] -->|Serial /dev/ttyACM0| SerialReader
-        Pot1[Pot 1 - Master Volume] -->|Analog A0| SerialReader
-        Pot2[Pot 2 - App Volume] -->|Analog A1| SerialReader
+        Pot1["Pot 1 - Master Volume"] -->|Analog A0| SerialReader
+        Pot2["Pot 2 - App Volume"] -->|Analog A1| SerialReader
     end
 
-    subgraph Host Daemon (GTK 4 Process)
+    subgraph Host ["Host Daemon (GTK 4 Process)"]
         SerialReader[Serial Reader Thread] -->|Raw Values| CoreEngine[Banao Core Engine]
         ActiveWin[Active Window Tracker] -->|App Class Context| CoreEngine
         CoreEngine -->|Map App Context| ProfileEngine[Profile & Key-Bindings Engine]
@@ -25,7 +25,7 @@ graph TD
         CoreEngine -.->|Communication Pipe| TrayHelper
     end
 
-    subgraph UI & System (Separate Processes)
+    subgraph UISys ["UI & System (Separate Processes)"]
         GUI[GTK4 Libadwaita Config Window]
         TrayHelper[GTK3 AyatanaAppIndicator Subprocess]
     end
@@ -161,3 +161,9 @@ If you choose to use a matrix layout or change buttons, modify:
 ### Customizing Audio Backend
 Banao uses `pulsectl` (PulseAudio / Pipewire interface) inside `src/adapters/linux.py` under the `LinuxAudioController` class. 
 - To map Potentiometer 2 to specific channels or groups (e.g. specific game audio or discord rather than the active focused app stream), edit the active stream extraction code inside `LinuxAudioController.get_active_stream()`.
+
+---
+
+## Acknowledgements & Credits
+
+Banao's software companion and physical layout visualizer is based on and designed for the DIY macropad hardware layout created by **Tidelite**. While Banao is configured out-of-the-box for Tidelite's physical design, the Banao daemon and GUI are highly customizable and can be easily adapted to support other custom DIY macropad layout configurations.
