@@ -122,12 +122,35 @@ class ProfileEngine:
         if not app_class:
             return "Global", self.profiles["Global"]
             
+        # Normalize: lowercase and replace hyphens/underscores with spaces for fuzzy matching
+        def normalize(s):
+            return s.lower().replace("-", " ").replace("_", " ")
+        
         app_class_lower = app_class.lower()
+        app_class_norm = normalize(app_class)
+        
+        # 1. Exact match pass (raw lowercase)
         for key, profile in self.profiles.items():
             mapped_class = profile.get("app_class", "")
             if mapped_class and mapped_class.lower() == app_class_lower:
                 return key, profile
                 
+        # 2. Normalized exact match (handles 'google chrome' == 'google-chrome')
+        for key, profile in self.profiles.items():
+            mapped_class = profile.get("app_class", "")
+            if mapped_class and normalize(mapped_class) == app_class_norm:
+                return key, profile
+                
+        # 3. Substring match pass (e.g., 'zen' in 'app.zen_browser.zen' or 'chrome' in 'google-chrome')
+        for key, profile in self.profiles.items():
+            mapped_class = profile.get("app_class", "")
+            if mapped_class:
+                m_norm = normalize(mapped_class)
+                # Ensure we only match significant substrings to prevent trivial false positives
+                if len(m_norm) >= 3 and len(app_class_norm) >= 3:
+                    if m_norm in app_class_norm or app_class_norm in m_norm:
+                        return key, profile
+                        
         # Return fallback Global profile
         return "Global", self.profiles["Global"]
 

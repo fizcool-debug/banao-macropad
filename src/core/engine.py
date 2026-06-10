@@ -113,14 +113,17 @@ class BanaoEngine:
 
                 if app_class != self.focused_app_class:
                     self.focused_app_class = app_class
+                    print(f"[Engine] Window focus changed: {app_class}")
                     self._trigger_callbacks("window_changed", app_class)
                     
                     # Update profile context (if auto-switching is enabled)
                     if self.auto_profile_switching:
                         prof_key, prof_data = self.profile_engine.get_profile_for_app(app_class)
+                        print(f"[Engine] Matched profile: {prof_key} (active was: {self.active_profile_name})")
                         if prof_key != self.active_profile_name:
                             self.active_profile_name = prof_key
                             self.active_profile = prof_data
+                            print(f"[Engine] Profile switched to: {prof_key}")
                             self._trigger_callbacks("profile_changed", prof_key, prof_data)
             except Exception as e:
                 print(f"[Engine] Window polling error: {e}")

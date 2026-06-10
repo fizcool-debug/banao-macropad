@@ -270,6 +270,17 @@ class LinuxActiveWindowDetector(BaseActiveWindowDetector):
             print(f"[LinuxWindow] Failed to connect to Session DBus: {e}")
             self._bus = None
 
+        # Initialize AT-SPI for Wayland active window detection
+        self._atspi_initialized = False
+        try:
+            import gi
+            gi.require_version('Atspi', '2.0')
+            from gi.repository import Atspi
+            Atspi.init()
+            self._atspi_initialized = True
+        except Exception as e:
+            print(f"[LinuxWindow] Failed to initialize AT-SPI: {e}")
+
     def get_active_window_class(self):
         # 1. Attempt to query standard GNOME extensions for window tracking under Wayland
         if self._bus:
@@ -283,14 +294,48 @@ class LinuxActiveWindowDetector(BaseActiveWindowDetector):
             if win:
                 return win
 
-        # 2. Fallback for X11 / XWayland sessions (using xprop)
+        # 2. Try AT-SPI (Accessibility API) - works on both X11 and Wayland without extensions
+        win = self._query_atspi_active_window()
+        if win:
+            return win
+
+        # 3. Fallback for X11 / XWayland sessions (using xprop)
         if 'DISPLAY' in os.environ:
             win = self._query_x11_active_window()
             if win:
                 return win
 
-        # 3. Final fallback: Return generic target
+        # 4. Final fallback: Return generic target
         return "Global"
+
+    def _query_atspi_active_window(self):
+        if not self._atspi_initialized:
+            return None
+        try:
+            from gi.repository import Atspi
+            desktop_count = Atspi.get_desktop_count()
+            for i in range(desktop_count):
+                desktop = Atspi.get_desktop(i)
+                if not desktop:
+                    continue
+                for j in range(desktop.get_child_count()):
+                    app = desktop.get_child_at_index(j)
+                    if not app:
+                        continue
+                    app_name = app.get_name()
+                    for k in range(app.get_child_count()):
+                        win = app.get_child_at_index(k)
+                        if not win:
+                            continue
+                        state_set = win.get_state_set()
+                        if state_set.contains(Atspi.StateType.ACTIVE):
+                            if app_name:
+                                return app_name.lower()
+        except Exception as e:
+            # Silence expected trace errors or minor API warnings
+            pass
+        return None
+
 
     def _query_focused_window_extension(self):
         """Query the popular 'Focused Window D-Bus' GNOME Shell extension."""
