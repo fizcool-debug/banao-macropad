@@ -410,6 +410,11 @@ class BanaoWindow(Adw.ApplicationWindow):
                 try:
                     self.engine.profile_engine.add_profile(name, app_class)
                     self._populate_profile_sidebar()
+                    # Switch editor context to this profile
+                    self.engine.active_profile_name = name
+                    self.engine.active_profile = self.engine.profile_engine.profiles[name]
+                    self._load_active_profile_config()
+                    self._update_ui_active_profile(name, self.engine.active_profile)
                 except Exception as e:
                     print(f"Error adding profile: {e}")
                     
@@ -722,7 +727,14 @@ class AppSelectionDialog(Gtk.Window):
             row = Adw.ActionRow.new()
             row.set_title(name)
             
-            window_class = app_id.replace(".desktop", "").lower()
+            window_class = ""
+            if hasattr(app, "get_startup_wm_class"):
+                window_class = app.get_startup_wm_class() or ""
+            if not window_class:
+                window_class = app_id.replace(".desktop", "").lower()
+            else:
+                window_class = window_class.lower()
+                
             row.set_subtitle(f"Class: {window_class}")
             
             gicon = app.get_icon()

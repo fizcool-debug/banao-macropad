@@ -160,7 +160,9 @@ class ProfileEngine:
             app_class: Focused application window class target.
         """
         if name in self.profiles:
-            raise ValueError(f"Profile '{name}' already exists.")
+            self.profiles[name]["app_class"] = app_class
+            self.save_profiles()
+            return
             
         # Copy bindings structure from Global as template
         global_bindings = self.profiles["Global"]["bindings"]
