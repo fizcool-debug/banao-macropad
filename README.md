@@ -116,27 +116,49 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 *Note: You may need to restart your computer for group assignment changes to take effect.*
 
-### 5. Wayland Profile Switching (AT-SPI Accessibility)
+### 5. Wayland Profile Switching (GNOME Extensions & AT-SPI)
 
-Banao detects the focused application on **GNOME Wayland** using the **AT-SPI accessibility API** — the same trusted API used by screen readers. No extra GNOME extensions are required.
+Because Wayland blocks global window sniffing, Banao queries the GNOME Shell state or accessibility APIs to track the active focused window. 
 
-For the detection to work with **non-GTK3 apps** (like Flatpak browsers or Electron apps), enable the toolkit accessibility bridge:
+To support all applications contextually (including Flatpaks, sandboxed apps, Electron apps, and native Rust apps like Zen Browser or Zed), **it is highly recommended to install one of the supported helper GNOME Extensions**. 
+
+Banao supports three detection methods natively, falling back gracefully:
+
+#### Method A: Focused Window D-Bus Extension (Recommended)
+This extension exposes a simple D-Bus method returning detailed active window information. To install it:
+```bash
+# 1. Clone the repository
+git clone https://github.com/flexagoon/focused-window-dbus.git /tmp/focused-window-dbus
+
+# 2. Pack and install it
+gnome-extensions pack /tmp/focused-window-dbus --out-dir=/tmp
+gnome-extensions install --force /tmp/focused-window-dbus@flexagoon.com.shell-extension.zip
+
+# 3. Enable the extension
+gnome-extensions enable focused-window-dbus@flexagoon.com
+```
+
+#### Method B: Window Calls Extended Extension
+This extension exposes a `FocusPID` D-Bus method. Banao calls this to get the active PID, then resolves it to the correct window class using `/proc`. To install it:
+* Install it from the [GNOME Extensions Web Portal](https://extensions.gnome.org/extension/4974/window-calls-extended/), or:
+```bash
+# 1. Clone the repository
+git clone https://github.com/hseliger/window-calls-extended.git /tmp/window-calls-extended
+
+# 2. Pack and install it
+gnome-extensions pack /tmp/window-calls-extended --out-dir=/tmp
+gnome-extensions install --force /tmp/window-calls-extended@hseliger.eu.shell-extension.zip
+
+# 3. Enable the extension
+gnome-extensions enable window-calls-extended@hseliger.eu
+```
+
+#### Method C: AT-SPI Accessibility API (Fallback)
+If no extensions are installed, Banao falls back to AT-SPI (Accessibility API). For AT-SPI to detect non-GTK applications, you must enable the toolkit accessibility bridge:
 ```bash
 gsettings set org.gnome.desktop.interface toolkit-accessibility true
 ```
-
-> [!NOTE]
-> This is a standard GNOME setting and has negligible performance impact. It simply tells apps to register with the accessibility bus, which Banao reads to detect window focus. GTK3/GTK4 apps register automatically regardless of this setting.
-
-> [!TIP]
-> If you have the [Focused Window D-Bus](https://extensions.gnome.org/extension/5592/focused-window-d-bus/) GNOME Shell extension installed and enabled, Banao will prefer it for even more reliable detection. To install it:
-> ```bash
-> # Clone and install the extension
-> git clone https://github.com/flexagoon/focused-window-dbus.git /tmp/focused-window-dbus
-> gnome-extensions pack /tmp/focused-window-dbus --out-dir=/tmp
-> gnome-extensions install --force /tmp/focused-window-dbus@flexagoon.com.shell-extension.zip
-> # Then log out and back in to activate it
-> ```
+*Note: Flatpak/electron apps may still fail to register with AT-SPI, making Method A or B highly recommended for complete support.*
 
 ---
 
