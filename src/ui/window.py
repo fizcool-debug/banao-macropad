@@ -726,6 +726,7 @@ class AppSelectionDialog(Gtk.Window):
                 
             row = Adw.ActionRow.new()
             row.set_title(name)
+            row.set_activatable(True)
             
             window_class = ""
             if hasattr(app, "get_startup_wm_class"):

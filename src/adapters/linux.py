@@ -294,6 +294,11 @@ class LinuxActiveWindowDetector(BaseActiveWindowDetector):
             if win:
                 return win
 
+            # Heuristic C: "Window Calls Extended" extension (FocusPID)
+            win = self._query_window_calls_extended_extension()
+            if win:
+                return win
+
         # 2. Try AT-SPI (Accessibility API) - works on both X11 and Wayland without extensions
         win = self._query_atspi_active_window()
         if win:
@@ -331,7 +336,7 @@ class LinuxActiveWindowDetector(BaseActiveWindowDetector):
                         if state_set.contains(Atspi.StateType.ACTIVE):
                             if app_name:
                                 return app_name.lower()
-        except Exception as e:
+        except Exception:
             # Silence expected trace errors or minor API warnings
             pass
         return None
@@ -379,6 +384,72 @@ class LinuxActiveWindowDetector(BaseActiveWindowDetector):
             wm_class = data.get('class') or data.get('wm_class')
             if wm_class:
                 return wm_class.lower()
+        except Exception:
+            pass
+        return None
+
+    def _query_window_calls_extended_extension(self):
+        """Query the 'Window Calls Extended' GNOME Shell extension."""
+        try:
+            result = self._bus.call_sync(
+                'org.gnome.Shell',
+                '/org/gnome/Shell/Extensions/WindowsExt',
+                'org.gnome.Shell.Extensions.WindowsExt',
+                'FocusPID',
+                None,
+                None,
+                Gio.DBusCallFlags.NONE,
+                100,
+                None
+            )
+            child = result.get_child_value(0)
+            pid = None
+            type_str = child.get_type_string()
+            if type_str in ('u', 'i', 's', 'y', 'n', 'q', 'x', 't'):
+                if type_str == 's':
+                    pid_str = child.get_string()
+                    if pid_str.isdigit():
+                        pid = int(pid_str)
+                else:
+                    pid = int(child.get_int64() if type_str in ('x', 't') else child.get_uint32() if type_str == 'u' else child.get_int32())
+            
+            if pid and pid > 0:
+                return self._get_class_from_pid(pid)
+        except Exception:
+            pass
+        return None
+
+    def _get_class_from_pid(self, pid):
+        if not pid:
+            return None
+        try:
+            # Read exe symlink to get binary name
+            exe_path = os.readlink(f"/proc/{pid}/exe")
+            binary_name = os.path.basename(exe_path).lower()
+            
+            # Special case for flatpaks (running under flatpak or bwrap)
+            if binary_name == "bwrap":
+                try:
+                    with open(f"/proc/{pid}/cmdline", "r") as f:
+                        cmdline = f.read()
+                    # flatpak sandbox processes have --application=app.id
+                    import re
+                    match = re.search(r'--application=([a-zA-Z0-9\._-]+)', cmdline)
+                    if match:
+                        return match.group(1).lower()
+                except Exception:
+                    pass
+            
+            # Read /proc/<pid>/comm for short command name
+            try:
+                with open(f"/proc/{pid}/comm", "r") as f:
+                    comm_name = f.read().strip().lower()
+                if comm_name and binary_name in ("python", "python3", "sh", "bash"):
+                    return comm_name
+            except Exception:
+                comm_name = None
+                
+            return binary_name
         except Exception:
             pass
         return None
