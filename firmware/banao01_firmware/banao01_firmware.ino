@@ -30,32 +30,37 @@ bool lastEncoderBtn = false;
 // Encoder ISR variables
 volatile bool encoderMoved = false;
 const char* volatile encoderDir = "NONE";
+volatile int encoderCount = 0;
+volatile uint8_t old_AB = 3;
 
-// Debounce settings
-unsigned long lastDebounceTime = 0;
-const unsigned long DEBOUNCE_DELAY = 15; // ms
+// Change this to 2 if your encoder requires two clicks to register one step,
+// or if one click registers two steps. Default is 4 for standard EC11.
+const int ENCODER_STEPS_PER_DETENT = 4;
 
 // Hysteresis threshold for Analog Potentiometers
 const int POT_HYSTERESIS = 3;
 
-// Interrupt Service Routine for Rotary Encoder (CLK/Pin 2)
+// Interrupt Service Routine for Rotary Encoder (Gray Code / Quadrature State Machine)
 void encoderISR() {
-  static unsigned long lastInterruptTime = 0;
-  unsigned long interruptTime = millis();
+  uint8_t A = digitalRead(PIN_ENCODER_A);
+  uint8_t B = digitalRead(PIN_ENCODER_B);
+  uint8_t new_AB = (A << 1) | B;
   
-  // Software debouncing for encoder contacts
-  if (interruptTime - lastInterruptTime > 4) {
-    // Read DT (Pin 3) to determine direction on CLK falling edge
-    if (digitalRead(PIN_ENCODER_A) == LOW) {
-      if (digitalRead(PIN_ENCODER_B) == HIGH) {
-        encoderDir = "CW";
-      } else {
-        encoderDir = "CCW";
-      }
-      encoderMoved = true;
-    }
+  // Transition state table:
+  // index: old_AB | new_AB
+  // Returns: 0 (no move), 1 (CW), -1 (CCW)
+  static const int8_t enc_states[] = {
+    0, -1,  1,  0,
+    1,  0,  0, -1,
+   -1,  0,  0,  1,
+    0,  1, -1,  0
+  };
+  
+  int8_t val = enc_states[(old_AB << 2) | new_AB];
+  if (val != 0) {
+    encoderCount += val;
+    old_AB = new_AB;
   }
-  lastInterruptTime = interruptTime;
 }
 
 void setup() {
@@ -66,8 +71,12 @@ void setup() {
   pinMode(PIN_ENCODER_B, INPUT_PULLUP);
   pinMode(PIN_ENCODER_BTN, INPUT_PULLUP);
   
-  // Attach hardware interrupt to CLK (Pin 2)
-  attachInterrupt(digitalPinToInterrupt(PIN_ENCODER_A), encoderISR, FALLING);
+  // Initialize state machine starting value
+  old_AB = (digitalRead(PIN_ENCODER_A) << 1) | digitalRead(PIN_ENCODER_B);
+  
+  // Attach hardware interrupts to both CLK and DT on CHANGE
+  attachInterrupt(digitalPinToInterrupt(PIN_ENCODER_A), encoderISR, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(PIN_ENCODER_B), encoderISR, CHANGE);
   
   // Configure Button Pins (Direct input with pullup)
   for (int i = 0; i < NUM_BUTTONS; i++) {
@@ -134,7 +143,26 @@ void loop() {
     stateChanged = true;
   }
   
-  // Check rotary encoder movement
+  // Check rotary encoder movement from the state machine
+  int currentCount = 0;
+  noInterrupts();
+  currentCount = encoderCount;
+  interrupts();
+  
+  if (currentCount >= ENCODER_STEPS_PER_DETENT) {
+    encoderDir = "CW";
+    encoderMoved = true;
+    noInterrupts();
+    encoderCount -= ENCODER_STEPS_PER_DETENT;
+    interrupts();
+  } else if (currentCount <= -ENCODER_STEPS_PER_DETENT) {
+    encoderDir = "CCW";
+    encoderMoved = true;
+    noInterrupts();
+    encoderCount += ENCODER_STEPS_PER_DETENT;
+    interrupts();
+  }
+  
   if (encoderMoved) {
     stateChanged = true;
   }
