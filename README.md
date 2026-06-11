@@ -1,5 +1,7 @@
 # Banao (DIY Macropad Controller & Daemon)
 
+![Banao User Interface](data/screenshots/screenshot.png)
+
 Banao is an open-source, highly responsive GUI companion application and background daemon for DIY custom macropads. 
 
 Built using **GTK 4** and **Libadwaita**, Banao is designed for modern Linux desktops (specifically optimized for **Fedora 44 / GNOME Shell on Wayland**) to manage profiles, text macros, keyboard shortcuts, and dynamic audio routing directly from physical controls.
